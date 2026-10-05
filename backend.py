@@ -106,7 +106,7 @@ class WanRenderer:
         self.release()
         from diffusers import AutoencoderKLWan, WanPipeline
         model_id, _, _ = PROFILES[profile]
-        dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+        dtype = torch.float16 if self.low_memory(profile) else (torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16)
         vae = AutoencoderKLWan.from_pretrained(model_id, subfolder='vae', torch_dtype=torch.float32)
         options = {'text_encoder': None} if self.low_memory(profile) else {}
         pipe = WanPipeline.from_pretrained(model_id, vae=vae, torch_dtype=dtype,
@@ -122,6 +122,8 @@ class WanRenderer:
     def render(self, shot, plan, path, profile, seed, steps):
         import torch
         from diffusers.utils import export_to_video
+        from contextlib import nullcontext
+        from torch.nn.attention import sdpa_kernel, SDPBackend
         prompt = self.prompt(shot, plan)
         if self.low_memory(profile):
             cache = self.embedding_path(prompt, profile, Path(path).parent.parent)
@@ -140,7 +142,8 @@ class WanRenderer:
             conditioning = {'prompt': prompt, 'negative_prompt': NEGATIVE_PROMPT}
         _, width, height = PROFILES[profile]
         try:
-            with torch.inference_mode():
+            attention = sdpa_kernel(SDPBackend.EFFICIENT_ATTENTION) if self.low_memory(profile) else nullcontext()
+            with torch.inference_mode(), attention:
                 frames = self.pipe(**conditioning, height=height, width=width,
                     num_frames=81, num_inference_steps=int(steps), guidance_scale=5.0,
                     generator=torch.Generator(device='cpu').manual_seed(int(seed)),
