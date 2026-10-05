@@ -69,6 +69,12 @@ def render(job_id, regenerate=None, renderer=None):
         state.update(status='rendering', message='Loading video model. First run downloads model weights.')
         atomic_json(directory / 'state.json', state)
         yield state['message'], outputs(directory)
+        if hasattr(renderer, 'prepare'):
+            state['message'] = 'Preparing prompt embeddings. Economy mode unloads the text encoder before video generation.'
+            atomic_json(directory / 'state.json', state)
+            yield state['message'], outputs(directory)
+            renderer.prepare(plan, state['profile'], directory,
+                cancelled=lambda: (directory / 'cancel').exists())
         index = 0
         for ep_index, episode in enumerate(plan['episodes'], 1):
             ep_folder = directory / f'episode-{ep_index:02}'

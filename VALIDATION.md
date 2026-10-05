@@ -29,3 +29,6 @@ This is an implementation of a real-model inference/production pipeline, not a n
 - Live OAuth, YouTube upload, proxy deployment, new Docker image and GPU inference still require target-server validation.
 
 Final YouTube update checks: all 10 automated tests passed, including incomplete-session recovery protection. Login/OAuth entry/state rejection checks passed again after UI integration.
+
+
+Memory-saving update: 12 CPU/mock tests pass, including prompt cache reuse and invalidation, explicit CUDA/dtype placement of both embeddings, video pipeline loading without UMT5, real FFmpeg 1080p export/resume, and private YouTube resumable upload/deduplication. Integrated GPU inference has not been run in this workspace. The uploaded Colab notebook demonstrated the manual sequence, not this new integration. Test one Economy shot on Colab before multi-scene production.

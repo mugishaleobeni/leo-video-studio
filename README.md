@@ -138,3 +138,12 @@ The tests use a clearly test-only FFmpeg source to exercise planning, failure re
 - Gradio hosting: https://www.gradio.app/guides/sharing-your-app
 
 Dependencies are bounded ranges, not a complete reproducibility lock. Follow model licenses and applicable requirements when choosing deployment and data. The AI video model is already pretrained; there is no from-scratch training command in this studio.
+
+
+### Economy memory-saving renderer
+
+Economy 1.3B uses `LOW_MEMORY=1` by default. It encodes the reviewed storyboard with a 4-bit NF4 UMT5 encoder, saves each distinct prompt to `.prompt_embeddings` in the project folder, unloads that encoder, and then loads the video pipeline with `text_encoder=None`. Both conditioning tensors are explicitly moved to CUDA using the transformer's dtype. Cached embeddings are reused on resume; changing a prompt, style, character description, or model changes its cache key. A stop request is checked between prompt encodings as well as between video shots.
+
+The new path follows the manually successful Colab T4 sequence, but integrated GPU inference still needs validation. CPU/mock tests do not establish GPU memory fit or visual quality. First test one Economy shot in a fresh Colab session. The 14B profile retains its original loading path and requires substantially more resources. Set `LOW_MEMORY=0` only when the host can fit the original full text encoder. The first run still downloads the large unquantized text encoder checkpoint before quantizing it: allow at least 40 GB free cache disk space. Prompt caches add disk use as seasons grow. 1080p remains an upscale.
+
+Update only source files from this release; retain your existing `studio_data`, OAuth configuration, token, and upload records. Do not click render on an imported completed clip unless you intend to regenerate it.
